@@ -1,6 +1,6 @@
 # Minecraft Launcher Core by Golang (MLCG)
 
-English [简体中文]("http://mcenjoy.cn")
+English [简体中文](README.zh.md)
 
 A Easy Minecraft Launcher Core
 
@@ -40,8 +40,10 @@ you **must** mark the link of this repository in your software.
 
 Thanks
 
-1. [教程/编写启动器]("https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8") [WIKI]
-2. [
+[教程/编写启动器]("https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8") [WIKI]
+
+[
 gomclauncher
 ]("https://github.com/xmdhs/gomclauncher") [MIT]
-3. [Zh:Microsoft Authentication Scheme]("https://wiki.vg/Microsoft_Authentication_Scheme") [WIKI]
+
+[Microsoft Authentication Scheme]("https://wiki.vg/Microsoft_Authentication_Scheme") [WIKI]

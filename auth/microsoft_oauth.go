@@ -273,6 +273,10 @@ func getMicrosoftCode(host string) (code string, err error) {
 			io.WriteString(w, "Successful!")
 			return
 		} else {
+			if q.Get("error") != "" {
+				io.WriteString(w, q.Get("error")+": "+q.Get("error_description"))
+				return
+			}
 			io.WriteString(w, "Failed!")
 			return
 		}

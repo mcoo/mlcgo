@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"mlcgo/auth"
+	"mlcgo/downloader"
 	mlclog "mlcgo/log"
 	"mlcgo/model"
 	"mlcgo/resolver"
@@ -197,10 +198,10 @@ func CheckDownloadJob(libPath, sha1, url string) *model.DownloadFile {
 		return nil
 	}
 
-	if utils.PathExists(libPath) && strings.ToLower(func(path string) string {
+	if utils.PathExists(libPath) && strings.EqualFold(func(path string) string {
 		s, _ := utils.SHA1File(path)
 		return s
-	}(libPath)) == strings.ToLower(sha1) {
+	}(libPath), sha1) {
 		return nil
 	}
 
@@ -289,87 +290,8 @@ func (c *Core) Launch(ctx context.Context) error {
 	//log.Println(cmdArgs)
 
 	// 补全 libraries 和 资源文件
-
 	if c.isAutoCompletion {
-		if c.stepCh != nil {
-			c.stepCh <- model.CompleteFilesStep
-		}
-		var wg sync.WaitGroup
-		if c.maxDownloadCount == 0 {
-			c.maxDownloadCount = runtime.NumCPU()
-		}
-		assets, err := resolver.ResolverAssets(c.clientInfo, c.minecraftPath)
-		if err != nil {
-			return err
-		}
-		downloadCh := make(chan model.DownloadFile, 10)
-		go func() {
-			defer close(downloadCh)
-			for _, v := range c.clientInfo.Libraries {
-				if v.Native {
-					libPath := filepath.Join(c.minecraftPath, "libraries", v.NativePath)
-					job := CheckDownloadJob(libPath, v.NativeSha1, v.NativeURL)
-					if job != nil {
-						select {
-						case <-ctx.Done():
-							log.Debugln("接收到结束指令")
-							close(downloadCh)
-							return
-						case downloadCh <- *job:
-							if v.Path == v.NativePath {
-								continue
-							}
-						}
-					}
-				}
-				libPath := filepath.Join(c.minecraftPath, "libraries", v.Path)
-				job := CheckDownloadJob(libPath, v.Sha1, v.Url)
-				if job != nil {
-					select {
-					case <-ctx.Done():
-						log.Debugln("接收到结束指令")
-						close(downloadCh)
-						return
-					case downloadCh <- *job:
-					}
-				}
-			}
-			for _, v := range assets {
-				job := CheckDownloadJob(v.Path, v.Hash, v.Url)
-				if job != nil {
-					select {
-					case <-ctx.Done():
-						log.Debugln("接收到结束指令")
-						close(downloadCh)
-						return
-					case downloadCh <- *job:
-					}
-				}
-			}
-
-		}()
-
-		for i := 0; i < c.maxDownloadCount; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				DownloadWork(ctx, downloadCh)
-			}()
-		}
-		wg.Wait()
-
-		select {
-		case <-ctx.Done():
-			return errors.New("接收到结束指令")
-		default:
-		}
-
-		// 解压 native
-		for _, v := range c.clientInfo.Libraries {
-			if v.Native {
-				utils.UnzipNative(filepath.Join(c.minecraftPath, "libraries", v.NativePath), c.nativeDir)
-			}
-		}
+		c.autoCompletion(ctx, nil)
 	}
 	c.generateLauncherProfiles()
 	if c.javaPath == "" {
@@ -384,24 +306,85 @@ func (c *Core) Launch(ctx context.Context) error {
 	cmd.Stdout = c.stdout
 	cmd.Dir = c.minecraftPath
 
-	if c.debug {
-		log.Debugln("'" + strings.Join(cmdArgs, "' '") + "'")
-	}
+	log.Debugln("'" + strings.Join(cmdArgs, "' '") + "'")
+
 	return cmd.Run()
 }
+func (c *Core) autoCompletion(ctx context.Context, extraJobs []model.DownloadFile) error {
+	if c.stepCh != nil {
+		c.stepCh <- model.CompleteFilesStep
+	}
+	if c.maxDownloadCount == 0 {
+		c.maxDownloadCount = runtime.NumCPU()
+	}
+	assets, err := resolver.ResolverAssets(c.clientInfo, c.minecraftPath)
+	if err != nil {
+		return err
+	}
 
-func DownloadWork(ctx context.Context, workCh chan model.DownloadFile) error {
-	for job := range workCh {
-		dir := filepath.Dir(job.Path)
-		os.MkdirAll(dir, 0755)
-		_, err := req.R().SetOutputFile(job.Path).Get(job.Url)
-		if err != nil {
-			log.Errorln(job.Path, job.Url, err)
+	d := downloader.NewDownloader(10, c.maxDownloadCount)
+	go func() {
+		defer d.CloseJobCh()
+		for _, v := range c.clientInfo.Libraries {
+			if v.Native {
+				libPath := filepath.Join(c.minecraftPath, "libraries", v.NativePath)
+				job := CheckDownloadJob(libPath, v.NativeSha1, v.NativeURL)
+				if job != nil {
+					err = d.AddJob(ctx, job)
+					if err != nil {
+						return
+					}
+					if v.Path == v.NativePath {
+						continue
+					}
+				}
+			}
+			libPath := filepath.Join(c.minecraftPath, "libraries", v.Path)
+			job := CheckDownloadJob(libPath, v.Sha1, v.Url)
+			if job != nil {
+				err = d.AddJob(ctx, job)
+				if err != nil {
+					return
+				}
+			}
+		}
+		for _, v := range assets {
+			job := CheckDownloadJob(v.Path, v.Hash, v.Url)
+			if job != nil {
+				err = d.AddJob(ctx, job)
+				if err != nil {
+					return
+				}
+			}
+		}
+		for _, v := range extraJobs {
+			err = d.AddJob(ctx, &v)
+			if err != nil {
+				return
+			}
+		}
+
+	}()
+	d.StartDownload(ctx, func(info req.DownloadInfo, job *model.DownloadFile, status model.DownloadStatus) {
+		switch status {
+		case model.Downloading:
+			log.Debugf("Downloading [%s] %.2f%%", job.Path, float64(info.DownloadedSize)/float64(info.Response.ContentLength)*100.0)
+		case model.Downloaded:
+			log.Debugf("Downloaded [%s]", job.Path)
+		case model.DownloadError:
+			log.Debugf("Download Error [%s]", job.Path)
+		}
+
+	})
+
+	// 解压 native
+	for _, v := range c.clientInfo.Libraries {
+		if v.Native {
+			utils.UnzipNative(filepath.Join(c.minecraftPath, "libraries", v.NativePath), c.nativeDir)
 		}
 	}
 	return nil
 }
-
 func (c *Core) generateCP() string {
 	cp := ""
 	//version jar
@@ -437,28 +420,28 @@ func (c *Core) argumentsReplace(arguments []string) []string {
 	c.flagReplaceOnce.Do(func() {
 		c.flagReplaceMap = make(map[string]func() string)
 		c.flagReplaceMap["${auth_player_name}"] = func() string {
-			return utils.PreReplace(c.name)
+			return c.name
 		}
 		c.flagReplaceMap["${version_name}"] = func() string {
-			return utils.PreReplace(c.clientInfo.Id)
+			return c.clientInfo.Id
 		}
 		c.flagReplaceMap["${game_directory}"] = func() string {
 			if c.gameDir == "" {
-				c.gameDir = utils.PreReplace(c.minecraftPath)
+				c.gameDir = c.minecraftPath
 			}
-			return utils.PreReplace(c.gameDir)
+			return c.gameDir
 		}
 		c.flagReplaceMap["${assets_root}"] = func() string {
-			return utils.PreReplace(filepath.Join(c.minecraftPath, `assets`))
+			return filepath.Join(c.minecraftPath, `assets`)
 		}
 		c.flagReplaceMap["${assets_index_name}"] = func() string {
-			return utils.PreReplace(c.clientInfo.AssetIndex.ID)
+			return c.clientInfo.AssetIndex.ID
 		}
 		c.flagReplaceMap["${version_type}"] = func() string {
 			return "MLCGO"
 		}
 		c.flagReplaceMap["${launcher_version}"] = func() string {
-			return utils.PreReplace(Version) + "/MLCGO"
+			return Version + "/MLCGO"
 		}
 		c.flagReplaceMap["${launcher_name}"] = func() string {
 			return "MLCGO"
@@ -472,16 +455,16 @@ func (c *Core) argumentsReplace(arguments []string) []string {
 
 		c.flagReplaceMap["${natives_directory}"] = func() string {
 			if c.nativeDir == "" {
-				c.nativeDir = utils.PreReplace(filepath.Join(c.minecraftPath, "versions", c.version, "natives"))
+				c.nativeDir = filepath.Join(c.minecraftPath, "versions", c.version, "natives")
 			}
 			return c.nativeDir
 		}
 		c.flagReplaceMap["${library_directory}"] = func() string {
 
-			return utils.PreReplace(filepath.Join(c.minecraftPath, `libraries`))
+			return filepath.Join(c.minecraftPath, `libraries`)
 		}
 		c.flagReplaceMap["${classpath}"] = func() string {
-			return utils.PreReplace(c.generateCP())
+			return c.generateCP()
 		}
 		switch c.authType {
 		case auth.OfflineType:

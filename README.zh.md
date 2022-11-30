@@ -1,6 +1,6 @@
 # Minecraft Launcher Core by Golang (MLCG)
 
-[English]("README.md") 简体中文
+[English](README.md) 简体中文
 
 一个简单的我的世界启动器核心
 
@@ -40,7 +40,10 @@ func TestCore(t *testing.T) {
 
 感谢
 
-1. [教程/编写启动器]("https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8") [WIKI]
-2. [
+[教程/编写启动器](https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8) [WIKI]
+
+[
 gomclauncher
-]("https://github.com/xmdhs/gomclauncher") [MIT]
+](https://github.com/xmdhs/gomclauncher) [MIT]
+
+[Microsoft Authentication Scheme](https://wiki.vg/Microsoft_Authentication_Scheme) [WIKI]

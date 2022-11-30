@@ -3,6 +3,7 @@ package mlcgo
 import (
 	"context"
 	"mlcgo/model"
+	"mlcgo/utils"
 	"testing"
 )
 
@@ -37,4 +38,19 @@ func TestCore(t *testing.T) {
 		SetVersion("1.19.2-fabric").
 		SetStepChannel(ch).
 		Launch(context.Background()))
+}
+
+func TestDownloadGame(t *testing.T) {
+	versions, err := utils.GetAllMinecraftVersion()
+	if err != nil {
+		log.Errorln(err)
+	}
+	var c = NewCore().
+		SetJavaPath(`C:\Program Files\Java\jdk-17.0.2\bin\java.exe`).
+		SetMinecraftPath(`F:\mctest\.minecraft`).
+		SetRAM(2048).
+		OfflineLogin("enjoy").
+		Debug()
+	log.Println(c.DownloadGame(context.Background(), versions.Versions[4]))
+	c.Launch(context.Background())
 }
