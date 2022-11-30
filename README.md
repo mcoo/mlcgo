@@ -10,6 +10,7 @@ A Easy Minecraft Launcher Core
 - [x] Auto Completion
 - [x] Microsoft Oauth Launcher
 - [x] Authlib-injector Launcher
+- [x] Download Game
 
 ## Use 🚀
 
@@ -40,10 +41,8 @@ you **must** mark the link of this repository in your software.
 
 Thanks
 
-[教程/编写启动器]("https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8") [WIKI]
+[教程/编写启动器](https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8) [WIKI]
 
-[
-gomclauncher
-]("https://github.com/xmdhs/gomclauncher") [MIT]
+[gomclauncher](https://github.com/xmdhs/gomclauncher) [MIT]
 
-[Microsoft Authentication Scheme]("https://wiki.vg/Microsoft_Authentication_Scheme") [WIKI]
+[Microsoft Authentication Scheme](https://wiki.vg/Microsoft_Authentication_Scheme) [WIKI]

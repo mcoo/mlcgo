@@ -10,6 +10,7 @@
 - [x] 自动补全
 - [x] 微软登录
 - [x] Authlib-injector 登录启动
+- [x] 游戏下载
 
 ## 用法 🚀
 
@@ -42,8 +43,6 @@ func TestCore(t *testing.T) {
 
 [教程/编写启动器](https://minecraft.fandom.com/zh/wiki/%E6%95%99%E7%A8%8B/%E7%BC%96%E5%86%99%E5%90%AF%E5%8A%A8%E5%99%A8) [WIKI]
 
-[
-gomclauncher
-](https://github.com/xmdhs/gomclauncher) [MIT]
+[gomclauncher](https://github.com/xmdhs/gomclauncher) [MIT]
 
 [Microsoft Authentication Scheme](https://wiki.vg/Microsoft_Authentication_Scheme) [WIKI]
