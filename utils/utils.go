@@ -2,10 +2,13 @@ package utils
 
 import (
 	"errors"
+	mlclog "mlcgo/log"
 	"mlcgo/model"
 
 	"github.com/imroc/req/v3"
 )
+
+var log = mlclog.Log
 
 func IfThen[T any](cond bool, trueVal T, falseVal T) T {
 	if cond {
