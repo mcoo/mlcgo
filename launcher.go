@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -111,7 +112,6 @@ func (c *Core) Launch(ctx context.Context) error {
 	cmd.Stderr = c.stderr
 	cmd.Stdout = c.stdout
 	cmd.Dir = c.minecraftPath
-
 	log.Debugln("'" + strings.Join(cmdArgs, "' '") + "'")
 
 	return cmd.Run()
@@ -119,10 +119,17 @@ func (c *Core) Launch(ctx context.Context) error {
 
 func (c *Core) generateCP() string {
 	cp := ""
+	splitString := ";"
+	if runtime.GOOS == "windows" {
+		splitString = ";"
+	} else {
+		splitString = ":"
+	}
+
 	//version jar
-	cp += filepath.Join(c.minecraftPath, "versions", c.clientInfo.Id, c.clientInfo.Id+".jar") + ";"
+	cp += filepath.Join(c.minecraftPath, "versions", c.clientInfo.Id, c.clientInfo.Id+".jar") + splitString
 	if p := filepath.Join(c.minecraftPath, "versions", c.version, c.version+".jar"); utils.PathExists(p) && p != filepath.Join(c.minecraftPath, "versions", c.clientInfo.Id, c.clientInfo.Id+".jar") {
-		cp += filepath.Join(c.minecraftPath, "versions", c.version, c.version+".jar") + ";"
+		cp += filepath.Join(c.minecraftPath, "versions", c.version, c.version+".jar") + splitString
 	}
 
 	// libraries
@@ -132,7 +139,7 @@ func (c *Core) generateCP() string {
 			libs = append(libs, filepath.Join(c.minecraftPath, "libraries", v.Path))
 		}
 	}
-	return cp + strings.Join(libs, ";")
+	return cp + strings.Join(libs, splitString)
 }
 
 func (c *Core) generateLauncherProfiles() {

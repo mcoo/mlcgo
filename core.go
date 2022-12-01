@@ -7,6 +7,7 @@ import (
 	"mlcgo/model"
 	"mlcgo/utils"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -76,12 +77,15 @@ type Core struct {
 	authlibPassword string
 
 	authlibRootUrl string
+
+	versionIsolation bool
 }
 
 var log = mlclog.Log
 
 // Minecraft路径 eg:F:\mc\.minecraft
 func (c *Core) SetMinecraftPath(path string) *Core {
+	path, _ = filepath.Abs(path)
 	c.minecraftPath = path
 	return c
 }
@@ -100,6 +104,11 @@ func (c *Core) SetJavaPath(path string) *Core {
 
 func (c *Core) SetStepChannel(ch chan model.Step) *Core {
 	c.stepCh = ch
+	return c
+}
+
+func (c *Core) VersionIsolation() *Core {
+	c.versionIsolation = true
 	return c
 }
 

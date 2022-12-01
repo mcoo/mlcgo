@@ -18,8 +18,14 @@ func (c *Core) argumentsReplace(arguments []string) []string {
 		}
 		c.flagReplaceMap["${game_directory}"] = func() string {
 			if c.gameDir == "" {
-				c.gameDir = c.minecraftPath
+				if c.versionIsolation {
+					c.gameDir = filepath.Join(c.minecraftPath, `versions`, c.version)
+				} else {
+					c.gameDir = c.minecraftPath
+				}
+
 			}
+			log.Debugln("Game Dir:", c.gameDir)
 			return c.gameDir
 		}
 		c.flagReplaceMap["${assets_root}"] = func() string {

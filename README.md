@@ -11,6 +11,7 @@ A Easy Minecraft Launcher Core
 - [x] Microsoft Oauth Launcher
 - [x] Authlib-injector Launcher
 - [x] Download Game
+- [x] Cross platform support
 
 ## Use 🚀
 

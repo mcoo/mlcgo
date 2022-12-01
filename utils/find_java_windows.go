@@ -60,8 +60,8 @@ func FindJavaPath() (j []string, e error) {
 		javas[path] = struct{}{}
 	}
 	for k := range javas {
-		if PathExists(filepath.Join(k, "bin", "javaw.exe")) {
-			j = append(j, k)
+		if p := filepath.Join(k, "bin", "javaw.exe"); PathExists(p) {
+			j = append(j, p)
 		}
 	}
 	return j, nil
