@@ -110,7 +110,7 @@ AuthlibLogin(url,email,password)
 you **must** mark the link of this repository in your software.
 
 - Use this project
-- Edit this project
+- Modify this project
 
 ## Support Me ❤️
 
