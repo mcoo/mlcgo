@@ -39,6 +39,8 @@ MicrosoftAuth
 type MicrosoftAuth struct {
 	microsoft_info *MicrosoftOauthResponse
 	minecraft_info *MinecraftAuthResponse
+	client_id      string
+	redirect_uri   string
 }
 
 type SaveFile struct {
@@ -58,6 +60,12 @@ func (ms *MicrosoftAuth) Auth(loginInfo map[string]string) (*model.UserInfo, err
 		Password = []byte(v)
 	} else {
 		Password = PwdKey
+	}
+	if v, ok := loginInfo["clientId"]; ok {
+		ms.client_id = v
+	}
+	if v, ok := loginInfo["redirectUri"]; ok {
+		ms.redirect_uri = v
 	}
 	err := ms.readConfig(configPath, Password)
 	if err == nil {
@@ -79,7 +87,7 @@ func (ms *MicrosoftAuth) Auth(loginInfo map[string]string) (*model.UserInfo, err
 }
 
 func (ms *MicrosoftAuth) firstLogin(configPath string, Password []byte) (*model.UserInfo, error) {
-	loginUrl := getMicrosoftAuthUrl("", "")
+	loginUrl := getMicrosoftAuthUrl(ms.client_id, ms.redirect_uri)
 	log.Infoln("loginUrl:", loginUrl)
 	utils.OpenUrl(loginUrl)
 	code, err := getMicrosoftCode("")
