@@ -9,6 +9,7 @@ import (
 	"mlcgo/model"
 	"mlcgo/utils"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -17,9 +18,11 @@ var log = mlclog.Log
 
 func main() {
 	var selectId, memory int
-	var version, java string
+	var version, java, gameDir string
 	var versionIsolation bool
 	var authType auth.AuthType
+	gameDir, _ = os.Getwd()
+	gameDir = filepath.Join(gameDir, ".minecraft")
 	if len(os.Args) > 1 {
 		tmpTag := false
 		for _, arg := range os.Args {
@@ -28,16 +31,15 @@ func main() {
 			}
 			if tmpTag {
 				tmpTag = false
-				log.Debug(os.Chdir(arg))
-				log.Debug(os.Getwd())
+				gameDir = arg
 			}
-			if arg == "-rundir" {
+			if arg == "-gamedir" {
 				tmpTag = true
 			}
 
 		}
 	}
-	versions, err := utils.GetLocalVersions(".minecraft/versions")
+	versions, err := utils.GetLocalVersions(filepath.Join(gameDir, "versions"))
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -118,6 +120,13 @@ authTypeSet:
 
 		c.AuthlibLogin(url, email, password)
 	}
+
+	log.Info("自动补全(0=不启用 1=启用):")
+	fmt.Scan(&selectId)
+	if selectId == 0 {
+		c.NoAutoCompletion()
+	}
+
 	ch := make(chan model.Step)
 	go func() {
 		for {
@@ -146,7 +155,7 @@ authTypeSet:
 	log.Infoln(c.SetJavaPath(java).
 		SetStepChannel(ch).
 		Debug().
-		SetMinecraftPath("./.minecraft").
+		SetMinecraftPath(gameDir).
 		SetRAM(memory).
 		SetVersion(version).Launch(context.Background()))
 }

@@ -135,9 +135,9 @@ func (c *Core) SetMaxDownloadCount(maxDownloadCount int) *Core {
 	return c
 }
 
-// 自动补全
-func (c *Core) AutoCompletion() *Core {
-	c.isAutoCompletion = true
+// 不自动补全
+func (c *Core) NoAutoCompletion() *Core {
+	c.isAutoCompletion = false
 	return c
 }
 
