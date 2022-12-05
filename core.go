@@ -79,6 +79,8 @@ type Core struct {
 	authlibRootUrl string
 
 	versionIsolation bool
+
+	mirrorSource model.DownloadMirrorSource
 }
 
 var log = mlclog.Log
@@ -104,6 +106,11 @@ func (c *Core) SetJavaPath(path string) *Core {
 
 func (c *Core) SetStepChannel(ch chan model.Step) *Core {
 	c.stepCh = ch
+	return c
+}
+
+func (c *Core) SetDownloadMirror(mirror model.DownloadMirrorSource) *Core {
+	c.mirrorSource = mirror
 	return c
 }
 

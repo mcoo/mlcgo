@@ -2,6 +2,7 @@ package mlcgo
 
 import (
 	"context"
+	"mlcgo/downloader"
 	"mlcgo/model"
 	"mlcgo/resolver"
 	"os"
@@ -10,6 +11,11 @@ import (
 	"github.com/imroc/req/v3"
 	"github.com/tidwall/gjson"
 )
+
+func (c *Core) replaceDownloadJob(j *model.DownloadFile) *model.DownloadFile {
+	j.Url = downloader.ReplaceDownloadUrl(j.Url, c.mirrorSource)
+	return j
+}
 
 func (c *Core) DownloadGame(ctx context.Context, version model.Version) error {
 	path := filepath.Join(c.minecraftPath, "versions", version.ID)

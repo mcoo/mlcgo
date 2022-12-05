@@ -3,6 +3,7 @@ package resolver
 import (
 	"io/ioutil"
 	"log"
+	"mlcgo/downloader"
 	"mlcgo/model"
 	"mlcgo/utils"
 	"os"
@@ -222,18 +223,18 @@ func resolverClient(g *gjson.Result, isDemo, isCustomResolution bool) (clientInf
 	return
 }
 
-func ResolverAssets(clientInfo *model.ClientInfo, MinecraftPath string) (assets []model.Asset, err error) {
+func ResolverAssets(clientInfo *model.ClientInfo, MinecraftPath string, mirror model.DownloadMirrorSource) (assets []model.Asset, err error) {
 	assetsPath := filepath.Join(MinecraftPath, `assets`)
 	os.MkdirAll(assetsPath, 0755)
 	var jsonByte []byte
 	if jsonPath := filepath.Join(assetsPath, "indexes", clientInfo.AssetIndex.ID+".json"); utils.PathExists(jsonPath) {
 		sha1, err := utils.SHA1File(jsonPath)
-		if err == nil && strings.ToLower(sha1) == strings.ToLower(clientInfo.AssetIndex.Sha1) {
+		if err == nil && strings.EqualFold(sha1, clientInfo.AssetIndex.Sha1) {
 			jsonByte, _ = ioutil.ReadFile(jsonPath)
 		}
 	}
 	if jsonByte == nil {
-		resp, err := req.R().Get(clientInfo.AssetIndex.URL)
+		resp, err := req.R().Get(downloader.ReplaceDownloadUrl(clientInfo.AssetIndex.URL, mirror))
 		if err != nil {
 			return nil, err
 		}

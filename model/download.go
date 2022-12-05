@@ -13,3 +13,13 @@ type DownloadFile struct {
 	Path string `json:"path"`
 	Sha1 string `json:"sha1"`
 }
+
+// Download From BMCLAPI or MCBBS
+
+type DownloadMirrorSource int
+
+const (
+	Mojang DownloadMirrorSource = iota
+	BMCL
+	Mcbbs
+)

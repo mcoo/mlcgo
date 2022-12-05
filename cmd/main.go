@@ -23,9 +23,19 @@ func main() {
 	var authType auth.AuthType
 	gameDir, _ = os.Getwd()
 	gameDir = filepath.Join(gameDir, ".minecraft")
+	c := mlcgo.NewCore()
 	if len(os.Args) > 1 {
 		tmpTag := false
 		for _, arg := range os.Args {
+			if arg == "-debug" {
+				log.SetLevel(logrus.DebugLevel)
+			}
+			if arg == "-bmcl" {
+				c.SetDownloadMirror(model.BMCL)
+			}
+			if arg == "-mcbbs" {
+				c.SetDownloadMirror(model.Mcbbs)
+			}
 			if arg == "-debug" {
 				log.SetLevel(logrus.DebugLevel)
 			}
@@ -94,7 +104,7 @@ authTypeSet:
 	if authType > 2 || authType < 0 {
 		goto authTypeSet
 	}
-	c := mlcgo.NewCore()
+
 	switch authType {
 	case auth.OfflineType:
 		log.Debugln("离线认证")
