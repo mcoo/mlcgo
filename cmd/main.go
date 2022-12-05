@@ -9,7 +9,9 @@ import (
 	"mlcgo/model"
 	"mlcgo/utils"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 )
@@ -144,6 +146,7 @@ authTypeSet:
 			switch v {
 			case model.StopStep:
 				log.Println("启动线程停止")
+				return
 			case model.StartLaunchStep:
 				log.Println("开始启动")
 			case model.AuthAccountStep:
@@ -160,12 +163,19 @@ authTypeSet:
 	if versionIsolation {
 		c.VersionIsolation()
 	}
-	// dir, _ := os.Getwd()
+	ctx, cancel := context.WithCancel(context.Background())
+	exitChan := make(chan os.Signal)
+	signal.Notify(exitChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-exitChan
+		log.Println("执行退出命令")
+		cancel()
+	}()
 	log.Infoln(version, java, memory, versionIsolation)
 	log.Infoln(c.SetJavaPath(java).
 		SetStepChannel(ch).
 		Debug().
 		SetMinecraftPath(gameDir).
 		SetRAM(memory).
-		SetVersion(version).Launch(context.Background()))
+		SetVersion(version).Launch(ctx))
 }
