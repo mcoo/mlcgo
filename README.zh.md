@@ -14,6 +14,7 @@
 - [x] Authlib-injector 登录启动
 - [x] 游戏下载
 - [x] 跨平台支持
+- [x] Forge,Fabric 安装
 
 ## 用法 🚀
 

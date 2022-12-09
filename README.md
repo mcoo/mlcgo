@@ -14,6 +14,7 @@ A Easy Minecraft Launcher Core
 - [x] Authlib-injector Launcher
 - [x] Download Game
 - [x] Cross platform support
+- [x] Forge,Fabric Installer
 
 ## Use 🚀
 
