@@ -60,8 +60,8 @@ func DownloadWork(ctx context.Context, workCh chan model.DownloadFile, callback 
 	for job := range workCh {
 		dir := filepath.Dir(job.Path)
 		os.MkdirAll(dir, 0755)
-		_, err := req.
-			R().SetOutputFile(job.Path).SetDownloadCallbackWithInterval(func(info req.DownloadInfo) {
+		_, err := req.SetContext(ctx).
+			SetOutputFile(job.Path).SetDownloadCallbackWithInterval(func(info req.DownloadInfo) {
 			if info.Response.Response != nil {
 				callback(info, job, model.Downloading)
 			}

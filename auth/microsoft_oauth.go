@@ -48,7 +48,7 @@ type SaveFile struct {
 	Minecraft MinecraftAuthResponse  `json:"minecraft"`
 }
 
-func (ms *MicrosoftAuth) Auth(loginInfo map[string]string) (*model.UserInfo, error) {
+func (ms *MicrosoftAuth) Auth(ctx context.Context, loginInfo map[string]string) (*model.UserInfo, error) {
 	var configPath string
 	var Password []byte
 	if v, ok := loginInfo["configPath"]; ok {
@@ -71,58 +71,64 @@ func (ms *MicrosoftAuth) Auth(loginInfo map[string]string) (*model.UserInfo, err
 	if err == nil {
 		if ms.minecraft_info.ExpiresIn+ms.minecraft_info.TimeNow.Unix() > time.Now().Unix() {
 			// 还没过期
-			info, err := ms.loginWithMinecraftAccessToken()
+			info, err := ms.loginWithMinecraftAccessToken(ctx)
 			if err == nil {
 				return info, nil
 			}
 		}
 		if ms.microsoft_info != nil {
-			info, err := ms.loginWithMicrosoft(configPath, Password)
+			info, err := ms.loginWithMicrosoft(ctx, configPath, Password)
 			if err == nil {
 				return info, nil
 			}
 		}
 	}
-	return ms.firstLogin(configPath, Password)
+	return ms.firstLogin(ctx, configPath, Password)
 }
 
-func (ms *MicrosoftAuth) firstLogin(configPath string, Password []byte) (*model.UserInfo, error) {
+func (ms *MicrosoftAuth) firstLogin(ctx context.Context, configPath string, Password []byte) (*model.UserInfo, error) {
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("context cancel")
+	default:
+	}
+
 	loginUrl := getMicrosoftAuthUrl(ms.client_id, ms.redirect_uri)
 	log.Infoln("loginUrl:", loginUrl)
 	utils.OpenUrl(loginUrl)
-	code, err := getMicrosoftCode("")
+	code, err := getMicrosoftCode(ctx, "")
 	if err != nil {
 		return nil, err
 	}
-	m_info, err := getMicrosoftToken(code, "", "", "")
+	m_info, err := getMicrosoftToken(ctx, code, "", "", "")
 	if err != nil {
 		return nil, err
 	}
 	m_info.TimeNow = time.Now()
-	xbl_info, err := getXBLToken(m_info.AccessToken)
+	xbl_info, err := getXBLToken(ctx, m_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
-	xsts_info, err := getXSTSToken(xbl_info.Token)
+	xsts_info, err := getXSTSToken(ctx, xbl_info.Token)
 	if err != nil {
 		return nil, err
 	}
 	if len(xsts_info.DisplayClaims.Xui) == 0 {
 		return nil, errors.New("you don not have user in xbox")
 	}
-	mc_info, err := authenticateMinecraft(xsts_info.DisplayClaims.Xui[0].Uhs, xsts_info.Token)
+	mc_info, err := authenticateMinecraft(ctx, xsts_info.DisplayClaims.Xui[0].Uhs, xsts_info.Token)
 	if err != nil {
 		return nil, err
 	}
 	mc_info.TimeNow = time.Now()
-	isOwnGame, err := verifyMinecraftOwnership(mc_info.AccessToken)
+	isOwnGame, err := verifyMinecraftOwnership(ctx, mc_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
 	if !isOwnGame {
 		return nil, errors.New("your account don not own minecraft")
 	}
-	profile, err := getProfile(mc_info.AccessToken)
+	profile, err := getProfile(ctx, mc_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -137,41 +143,41 @@ func (ms *MicrosoftAuth) firstLogin(configPath string, Password []byte) (*model.
 	}, nil
 }
 
-func (ms *MicrosoftAuth) loginWithMicrosoft(configPath string, Password []byte) (*model.UserInfo, error) {
+func (ms *MicrosoftAuth) loginWithMicrosoft(ctx context.Context, configPath string, Password []byte) (*model.UserInfo, error) {
 	m_info := ms.microsoft_info
 	if m_info.ExpiresIn+m_info.TimeNow.Unix() < time.Now().Unix() {
 		// access_token 无效了 使用refresh_token尝试
-		m_info_new, err := getMicrosoftToken("", m_info.RefreshToken, "", "")
+		m_info_new, err := getMicrosoftToken(ctx, "", m_info.RefreshToken, "", "")
 		if err != nil {
 			return nil, err
 		}
 		m_info = m_info_new
 	}
 
-	xbl_info, err := getXBLToken(m_info.AccessToken)
+	xbl_info, err := getXBLToken(ctx, m_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
-	xsts_info, err := getXSTSToken(xbl_info.Token)
+	xsts_info, err := getXSTSToken(ctx, xbl_info.Token)
 	if err != nil {
 		return nil, err
 	}
 	if len(xsts_info.DisplayClaims.Xui) == 0 {
 		return nil, errors.New("you don not have user in xbox")
 	}
-	mc_info, err := authenticateMinecraft(xsts_info.DisplayClaims.Xui[0].Uhs, xsts_info.Token)
+	mc_info, err := authenticateMinecraft(ctx, xsts_info.DisplayClaims.Xui[0].Uhs, xsts_info.Token)
 	if err != nil {
 		return nil, err
 	}
 	mc_info.TimeNow = time.Now()
-	isOwnGame, err := verifyMinecraftOwnership(mc_info.AccessToken)
+	isOwnGame, err := verifyMinecraftOwnership(ctx, mc_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
 	if !isOwnGame {
 		return nil, errors.New("your account don not own minecraft")
 	}
-	profile, err := getProfile(mc_info.AccessToken)
+	profile, err := getProfile(ctx, mc_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -186,15 +192,15 @@ func (ms *MicrosoftAuth) loginWithMicrosoft(configPath string, Password []byte) 
 	}, nil
 }
 
-func (ms *MicrosoftAuth) loginWithMinecraftAccessToken() (*model.UserInfo, error) {
-	isOwnGame, err := verifyMinecraftOwnership(ms.minecraft_info.AccessToken)
+func (ms *MicrosoftAuth) loginWithMinecraftAccessToken(ctx context.Context) (*model.UserInfo, error) {
+	isOwnGame, err := verifyMinecraftOwnership(ctx, ms.minecraft_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
 	if !isOwnGame {
 		return nil, errors.New("your account don not own minecraft")
 	}
-	profile, err := getProfile(ms.minecraft_info.AccessToken)
+	profile, err := getProfile(ctx, ms.minecraft_info.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +273,7 @@ func getMicrosoftAuthUrl(client_id string, redirect_uri string) string {
 	return "https://login.live.com/oauth20_authorize.srf?" + q.Encode()
 }
 
-func getMicrosoftCode(host string) (code string, err error) {
+func getMicrosoftCode(ctx context.Context, host string) (code string, err error) {
 	log.Debugln("get Microsoft code")
 	if host == "" {
 		host = "localhost:8809"
@@ -305,7 +311,7 @@ func getMicrosoftCode(host string) (code string, err error) {
 		return "", err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	select {
@@ -316,7 +322,7 @@ func getMicrosoftCode(host string) (code string, err error) {
 	err = srv.Shutdown(context.Background())
 	return
 }
-func getMicrosoftToken(code, refresh_token, client_id, redirect_uri string) (m *MicrosoftOauthResponse, err error) {
+func getMicrosoftToken(ctx context.Context, code, refresh_token, client_id, redirect_uri string) (m *MicrosoftOauthResponse, err error) {
 	log.Debugln("get Microsoft token")
 	if client_id == "" {
 		client_id = mlcgo_client_id
@@ -327,7 +333,7 @@ func getMicrosoftToken(code, refresh_token, client_id, redirect_uri string) (m *
 	if code == "" && refresh_token != "" {
 		// 第二次登录
 		var oauthToken MicrosoftOauthResponse
-		resp, err := req.R().SetFormData(map[string]string{
+		resp, err := req.SetContext(ctx).SetFormData(map[string]string{
 			"client_id":     client_id,
 			"refresh_token": refresh_token,
 			"grant_type":    "refresh_token",
@@ -346,7 +352,7 @@ func getMicrosoftToken(code, refresh_token, client_id, redirect_uri string) (m *
 	} else if code != "" {
 		// 第一次登录
 		var oauthToken MicrosoftOauthResponse
-		resp, err := req.R().SetFormData(map[string]string{
+		resp, err := req.SetContext(ctx).SetFormData(map[string]string{
 			"client_id":    client_id,
 			"code":         code,
 			"grant_type":   "authorization_code",
@@ -364,15 +370,15 @@ func getMicrosoftToken(code, refresh_token, client_id, redirect_uri string) (m *
 
 	} else {
 		// 你想干啥？
-		return nil, errors.New("参数错误")
+		return nil, errors.New("登录错误")
 	}
 }
 
-func getXBLToken(access_token string) (m *XBLResponse, err error) {
+func getXBLToken(ctx context.Context, access_token string) (m *XBLResponse, err error) {
 	log.Debugln("get xbl token")
 	// 第一次登录
 	var oauthToken XBLResponse
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`
 	{"Properties": {"AuthMethod": "RPS","SiteName": "user.auth.xboxlive.com","RpsTicket": "d=%s"},"RelyingParty": "http://auth.xboxlive.com","TokenType": "JWT"}`, access_token)).
 		Post("https://user.auth.xboxlive.com/user/authenticate")
 	if err != nil {
@@ -387,10 +393,10 @@ func getXBLToken(access_token string) (m *XBLResponse, err error) {
 	return &oauthToken, err
 }
 
-func getXSTSToken(xbl_token string) (*XSTSResponse, error) {
+func getXSTSToken(ctx context.Context, xbl_token string) (*XSTSResponse, error) {
 	log.Debugln("get xsts token")
 	var token XSTSResponse
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`
 	{
 		"Properties": {
 			"SandboxId": "RETAIL",
@@ -411,10 +417,10 @@ func getXSTSToken(xbl_token string) (*XSTSResponse, error) {
 }
 
 // Authenticate with Minecraft
-func authenticateMinecraft(userhash, xsts_token string) (*MinecraftAuthResponse, error) {
+func authenticateMinecraft(ctx context.Context, userhash, xsts_token string) (*MinecraftAuthResponse, error) {
 	log.Debugln("authenticate Minecraft")
 	var token MinecraftAuthResponse
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`
 	{
 		"identityToken": "XBL3.0 x=%s;%s"
 	}
@@ -427,9 +433,9 @@ func authenticateMinecraft(userhash, xsts_token string) (*MinecraftAuthResponse,
 	return &token, err
 }
 
-func verifyMinecraftOwnership(access_token string) (bool, error) {
+func verifyMinecraftOwnership(ctx context.Context, access_token string) (bool, error) {
 	log.Debugln("verify Minecraft Ownership")
-	resp, err := req.R().SetHeader("Authorization", "Bearer "+access_token).Get("https://api.minecraftservices.com/entitlements/mcstore")
+	resp, err := req.SetContext(ctx).SetHeader("Authorization", "Bearer "+access_token).Get("https://api.minecraftservices.com/entitlements/mcstore")
 	if err != nil {
 		return false, err
 	}
@@ -440,10 +446,10 @@ func verifyMinecraftOwnership(access_token string) (bool, error) {
 	return false, nil
 }
 
-func getProfile(access_token string) (*ProfileResponse, error) {
+func getProfile(ctx context.Context, access_token string) (*ProfileResponse, error) {
 	log.Debugln("get Profile")
 	profile := ProfileResponse{}
-	resp, err := req.R().SetHeader("Authorization", "Bearer "+access_token).Get("https://api.minecraftservices.com/minecraft/profile")
+	resp, err := req.SetContext(ctx).SetHeader("Authorization", "Bearer "+access_token).Get("https://api.minecraftservices.com/minecraft/profile")
 	if err != nil {
 		return nil, err
 	}

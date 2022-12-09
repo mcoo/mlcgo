@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +48,7 @@ func (al *AuthlibInjectorAuth) GetAuthlibInjectorJar(path string) error {
 	return err
 }
 
-func (al *AuthlibInjectorAuth) Auth(loginInfo map[string]string) (*model.UserInfo, error) {
+func (al *AuthlibInjectorAuth) Auth(ctx context.Context, loginInfo map[string]string) (*model.UserInfo, error) {
 	rootUrl, ok := loginInfo["root_url"]
 	if !ok {
 		return nil, errors.New("root_url is not set")
@@ -71,12 +72,12 @@ func (al *AuthlibInjectorAuth) Auth(loginInfo map[string]string) (*model.UserInf
 	al.readConfig(configPath, configPassword)
 
 	if al.AccessToken != "" && al.ClientToken != "" {
-		ok, err := verifyToken(rootUrl, al.AccessToken, al.ClientToken)
+		ok, err := verifyToken(ctx, rootUrl, al.AccessToken, al.ClientToken)
 		if err == nil && ok {
 			return &model.UserInfo{Name: al.Name, AccessToken: al.AccessToken, UUID: al.ClientToken}, nil
 		}
 		// refresh
-		authResponse, err := refresh(rootUrl, al.AccessToken, al.ClientToken)
+		authResponse, err := refresh(ctx, rootUrl, al.AccessToken, al.ClientToken)
 		if err == nil {
 			return &model.UserInfo{Name: authResponse.SelectedProfile.Name, AccessToken: authResponse.AccessToken, UUID: authResponse.ClientToken}, nil
 		}
@@ -90,7 +91,7 @@ func (al *AuthlibInjectorAuth) Auth(loginInfo map[string]string) (*model.UserInf
 		return nil, errors.New("password is not set")
 	}
 
-	a, err := login(rootUrl, email, password)
+	a, err := login(ctx, rootUrl, email, password)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +150,12 @@ func (al *AuthlibInjectorAuth) readConfig(path string, password []byte) error {
 	}
 	return errors.New("Config file not found")
 }
-func login(rootUrl, email, password string) (*AuthResponse, error) {
+func login(ctx context.Context, rootUrl, email, password string) (*AuthResponse, error) {
 	u, err := url.JoinPath(rootUrl, "/authserver/authenticate")
 	if err != nil {
 		return nil, err
 	}
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`{
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`{
 		"username":"%s",
 		"password":"%s",
 		"clientToken":"",
@@ -176,12 +177,12 @@ func login(rootUrl, email, password string) (*AuthResponse, error) {
 	return &r, err
 }
 
-func refresh(rootUrl, accessToken, clientToken string) (*AuthResponse, error) {
+func refresh(ctx context.Context, rootUrl, accessToken, clientToken string) (*AuthResponse, error) {
 	u, err := url.JoinPath(rootUrl, "/authserver/refresh")
 	if err != nil {
 		return nil, err
 	}
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`{
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`{
 		"accessToken":"%s",
 		"clientToken":"%s",
 		"requestUser":true
@@ -198,12 +199,12 @@ func refresh(rootUrl, accessToken, clientToken string) (*AuthResponse, error) {
 	return &r, err
 }
 
-func verifyToken(rootUrl, accessToken, clientToken string) (bool, error) {
+func verifyToken(ctx context.Context, rootUrl, accessToken, clientToken string) (bool, error) {
 	u, err := url.JoinPath(rootUrl, "/authserver/validate")
 	if err != nil {
 		return false, err
 	}
-	resp, err := req.R().SetBodyJsonString(fmt.Sprintf(`{
+	resp, err := req.SetContext(ctx).SetBodyJsonString(fmt.Sprintf(`{
 		"accessToken":"%s",
 		"clientToken":"%s"
 	}`, accessToken, clientToken)).Post(u)

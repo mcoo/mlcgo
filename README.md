@@ -4,6 +4,8 @@ English [简体中文](README.zh.md)
 
 A Easy Minecraft Launcher Core
 
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/mcoo/mlcgo?style=for-the-badge) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mcoo/mlcgo/goreleaser?style=for-the-badge) ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/mcoo/mlcgo?include_prereleases&style=for-the-badge)
+
 ## Features ✈️
 
 - [x] Offline Launcher

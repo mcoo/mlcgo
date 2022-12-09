@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"mlcgo/model"
 )
 
@@ -13,7 +14,7 @@ const (
 )
 
 type AuthInterface interface {
-	Auth(loginInfo map[string]string) (*model.UserInfo, error)
+	Auth(ctx context.Context, loginInfo map[string]string) (*model.UserInfo, error)
 	Logout() error
 }
 

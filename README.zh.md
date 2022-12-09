@@ -4,6 +4,8 @@
 
 一个简单的我的世界启动器核心
 
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/mcoo/mlcgo?style=for-the-badge) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mcoo/mlcgo/goreleaser?style=for-the-badge) ![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/mcoo/mlcgo?include_prereleases&style=for-the-badge)
+
 ## 功能 ✈️
 
 - [x] 离线登录
@@ -15,7 +17,7 @@
 
 ## 用法 🚀
 
-### Launch Game
+### 启动游戏
 
 ```golang
 mlcgo.NewCore().
@@ -27,7 +29,7 @@ mlcgo.NewCore().
     Launch(context.Background())
 ```
 
-Get launch status
+获取启动状态
 
 ```golang
     ch := make(chan model.Step)

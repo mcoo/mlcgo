@@ -49,6 +49,11 @@ func (c *Core) autoCompletion(ctx context.Context, extraJobs []model.DownloadFil
 					return
 				}
 			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
 		for _, v := range assets {
 			job := CheckDownloadJob(v.Path, v.Hash, v.Url)
@@ -58,11 +63,21 @@ func (c *Core) autoCompletion(ctx context.Context, extraJobs []model.DownloadFil
 					return
 				}
 			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
 		for _, v := range extraJobs {
 			err = d.AddJob(ctx, c.replaceDownloadJob(&v))
 			if err != nil {
 				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
 			}
 		}
 

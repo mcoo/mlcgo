@@ -37,7 +37,7 @@ func (c *Core) Launch(ctx context.Context) error {
 	case auth.OfflineType:
 	case auth.MicrosoftAuthType:
 		c.authCore = &auth.MicrosoftAuth{}
-		loginInfo, err := c.authCore.Auth(map[string]string{
+		loginInfo, err := c.authCore.Auth(ctx, map[string]string{
 			"configPath": filepath.Join(c.minecraftPath, "microsoft_auth.config"),
 		})
 		if err != nil {
@@ -48,7 +48,7 @@ func (c *Core) Launch(ctx context.Context) error {
 		c.name = loginInfo.Name
 	case auth.AuthlibInjectorAuthType:
 		c.authCore = &auth.AuthlibInjectorAuth{}
-		loginInfo, err := c.authCore.Auth(map[string]string{
+		loginInfo, err := c.authCore.Auth(ctx, map[string]string{
 			"configPath":  filepath.Join(c.minecraftPath, "authlib_auth.config"),
 			"email":       c.authlibEmail,
 			"password":    c.authlibPassword,
@@ -107,7 +107,11 @@ func (c *Core) Launch(ctx context.Context) error {
 	if c.stepCh != nil {
 		c.stepCh <- model.ExecCmdStep
 	}
-	//cmd := exec.Command(c.javaPath, cmdArgs...)
+	select {
+	case <-ctx.Done():
+		return errors.New("context cancel")
+	default:
+	}
 	cmd := exec.Command(c.javaPath, cmdArgs...)
 	cmd.Stderr = c.stderr
 	cmd.Stdout = c.stdout

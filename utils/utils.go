@@ -4,6 +4,7 @@ import (
 	"errors"
 	mlclog "mlcgo/log"
 	"mlcgo/model"
+	"strings"
 
 	"github.com/imroc/req/v3"
 )
@@ -41,4 +42,26 @@ func GetLatestMinecraftVersion(versions *model.McVersions, isPrerelease bool) (m
 		}
 	}
 	return model.Version{}, errors.New("not found")
+}
+
+func ArtifactFrom(name string) (string, error) {
+	pts := strings.Split(name, ":")
+	if len(pts) < 3 {
+		return "", errors.New("error length")
+	}
+	domain := pts[0]
+	name = pts[1]
+	ext := "jar"
+	last := len(pts) - 1
+	if idx := strings.Index(pts[last], "@"); idx != -1 {
+		ext = pts[last][idx+1:]
+		pts[last] = pts[last][:idx]
+	}
+	version := pts[2]
+	file := name + "-" + version
+	if len(pts) > 3 {
+		file += "-" + pts[3]
+	}
+	file += "." + ext
+	return strings.ReplaceAll(domain, ".", "/") + "/" + name + "/" + version + "/" + file, nil
 }
